@@ -1,0 +1,372 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Learning Hub</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+</head>
+
+<body>
+
+<div id="app">
+
+    <header class="header">
+
+        <div class="header-content">
+
+            <h2 class="logo">
+                <i class="fa-solid fa-graduation-cap"></i>
+                Learning Hub
+            </h2>
+
+            <button
+                class="cart-button"
+                @click="toggleCheckout"
+                :disabled="showLessons && cart.length === 0">
+
+                <i class="fa-solid fa-basket-shopping"></i>
+
+                {{ showLessons ? 'Checkout' : 'Back to Lessons' }}
+                ({{ numberOfItems }})
+
+            </button>
+
+        </div>
+
+    </header>
+
+    <main>
+
+        <section v-if="showLessons">
+
+            <div class="hero">
+
+                <h1>Find the perfect lesson.</h1>
+
+                <p>
+                    Explore after-school learning opportunities
+                    and book your place.
+                </p>
+
+            </div>
+
+            <div class="section-heading">
+
+                <div>
+                    <h2>Explore Lessons</h2>
+                    <p>Choose a subject that interests you</p>
+                </div>
+
+                <span class="lesson-count">
+                    {{ lessons.length }} Lessons
+                </span>
+
+            </div>
+
+            <div class="lesson-container">
+
+                <div
+                    class="lesson-card"
+                    v-for="lesson in lessons"
+                    :key="lesson.id">
+
+                    <div class="lesson-icon">
+
+                        <i :class="lesson.icon"></i>
+
+                    </div>
+
+                    <div class="lesson-details">
+
+                        <h3>{{ lesson.subject }}</h3>
+
+                        <p>
+                            <i class="fa-solid fa-location-dot"></i>
+                            {{ lesson.location }}
+                        </p>
+
+                        <p>
+                            <i class="fa-solid fa-chair"></i>
+                            {{ remainingSpaces(lesson) }} spaces left
+                        </p>
+
+                        <div class="lesson-bottom">
+
+                            <span class="price">
+                                £{{ lesson.price }}
+                            </span>
+
+                            <button
+                                class="add-button"
+                                @click="addToCart(lesson)"
+                                :disabled="!canAddToCart(lesson)">
+
+                                <i class="fa-solid fa-plus"></i>
+                                Add to Cart
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section v-else class="checkout-section">
+
+            <h1>Your Shopping Cart</h1>
+
+            <p class="subtitle">
+                Review your selected lessons before checkout.
+            </p>
+
+            <div v-if="cart.length === 0" class="empty-cart">
+                <i class="fa-solid fa-basket-shopping"></i>
+                <p>Your cart is empty.</p>
+            </div>
+
+            <div
+                v-for="lesson in lessons"
+                :key="lesson.id">
+
+                <div
+                    v-if="cartItemCount(lesson.id) > 0"
+                    class="cart-item">
+
+                    <div>
+
+                        <h3>{{ lesson.subject }}</h3>
+
+                        <p>
+                            Quantity: {{ cartItemCount(lesson.id) }}
+                        </p>
+
+                        <p>
+                            £{{ lesson.price * cartItemCount(lesson.id) }}
+                        </p>
+
+                    </div>
+
+                    <button
+                        class="remove-button"
+                        @click="removeFromCart(lesson)">
+
+                        <i class="fa-solid fa-trash"></i>
+                        Remove One
+
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div class="cart-total">
+                Total: £{{ cartTotal }}
+            </div>
+
+            <div v-if="cart.length > 0" class="checkout-form">
+
+                <h2>Customer Details</h2>
+
+                <label for="customerName">Full Name</label>
+
+                <input
+                    id="customerName"
+                    type="text"
+                    v-model="order.name"
+                    placeholder="Enter your full name">
+
+                <p class="error" v-if="order.name && !nameValid">
+                    Please enter letters and spaces only.
+                </p>
+
+                <label for="customerPhone">Phone Number</label>
+
+                <input
+                    id="customerPhone"
+                    type="tel"
+                    v-model="order.phone"
+                    placeholder="Enter your phone number">
+
+                <p class="error" v-if="order.phone && !phoneValid">
+                    Please enter numbers only.
+                </p>
+
+                <button
+                    class="confirm-button"
+                    @click="confirmOrder"
+                    :disabled="!canCheckout">
+
+                    <i class="fa-solid fa-check"></i>
+                    Confirm Order
+
+                </button>
+
+            </div>
+
+        </section>
+
+        <p class="success-message" v-if="orderMessage">
+            <i class="fa-solid fa-circle-check"></i>
+            {{ orderMessage }}
+        </p>
+
+    </main>
+
+    <footer>
+        <p>Learning Hub &copy; 2026</p>
+    </footer>
+
+</div>
+
+<script>
+
+const { createApp } = Vue
+
+createApp({
+
+    data() {
+        return {
+
+            showLessons: true,
+
+            lessons: [
+                {
+                    id: 1001,
+                    subject: 'Mathematics',
+                    location: 'London',
+                    price: 100,
+                    availability: 5,
+                    icon: 'fa-solid fa-calculator'
+                },
+                {
+                    id: 1002,
+                    subject: 'English',
+                    location: 'Oxford',
+                    price: 80,
+                    availability: 5,
+                    icon: 'fa-solid fa-book-open'
+                },
+                {
+                    id: 1003,
+                    subject: 'Science',
+                    location: 'Cambridge',
+                    price: 90,
+                    availability: 5,
+                    icon: 'fa-solid fa-flask'
+                }
+            ],
+
+            cart: [],
+
+            order: {
+                name: '',
+                phone: ''
+            },
+
+            orderMessage: ''
+
+        }
+    },
+
+    methods: {
+
+        addToCart(lesson) {
+            if (this.canAddToCart(lesson)) {
+                this.cart.push(lesson.id)
+                this.orderMessage = ''
+            }
+        },
+
+        cartItemCount(id) {
+            return this.cart.filter(item => item === id).length
+        },
+
+        remainingSpaces(lesson) {
+            return lesson.availability - this.cartItemCount(lesson.id)
+        },
+
+        canAddToCart(lesson) {
+            return this.remainingSpaces(lesson) > 0
+        },
+
+        toggleCheckout() {
+            this.showLessons = !this.showLessons
+        },
+
+        removeFromCart(lesson) {
+            const index = this.cart.indexOf(lesson.id)
+
+            if (index !== -1) {
+                this.cart.splice(index, 1)
+            }
+        },
+
+        confirmOrder() {
+            if (this.canCheckout) {
+
+                for (const lesson of this.lessons) {
+                    lesson.availability -= this.cartItemCount(lesson.id)
+                }
+
+                this.cart = []
+
+                this.order.name = ''
+                this.order.phone = ''
+
+                this.orderMessage = 'Order confirmed successfully!'
+
+                this.showLessons = true
+            }
+        }
+
+    },
+
+    computed: {
+
+        numberOfItems() {
+            return this.cart.length
+        },
+
+        cartTotal() {
+            return this.cart.reduce((total, id) => {
+                const lesson = this.lessons.find(item => item.id === id)
+                return total + (lesson ? lesson.price : 0)
+            }, 0)
+        },
+
+        nameValid() {
+            return /^[A-Za-z ]+$/.test(this.order.name.trim())
+        },
+
+        phoneValid() {
+            return /^[0-9]+$/.test(this.order.phone.trim())
+        },
+
+        canCheckout() {
+            return this.nameValid &&
+                   this.phoneValid &&
+                   this.cart.length > 0
+        }
+
+    }
+
+}).mount('#app')
+
+</script>
+
+</body>
+</html>
